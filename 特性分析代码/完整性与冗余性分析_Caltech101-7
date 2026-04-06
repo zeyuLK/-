@@ -1,0 +1,187 @@
+import scipy.io as sio
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+# 解决中文显示问题
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 黑体
+plt.rcParams['axes.unicode_minus'] = False    # 解决负号显示问题
+
+data = sio.loadmat('dataset\Caltech101-7.mat')
+
+X = data['X']
+Y = data['Y']
+
+views = data['X'][0]
+print("视图数量：", len(views))
+
+for i, v in enumerate(views):
+    print(f"视图 {i+1}: shape = {v.shape}")
+
+# 绘图（全中文）
+plt.figure(figsize=(8,6))
+
+for i, view in enumerate(views):
+    view = view.astype(float)
+    view = StandardScaler().fit_transform(view)
+    
+    pca = PCA().fit(view)
+    cum_var = np.cumsum(pca.explained_variance_ratio_)
+    
+    plt.plot(cum_var, label=f'视图 {i+1}')
+
+# 90% 参考线
+plt.axhline(y=0.9, linestyle='--', label='90%方差')
+
+# 全中文坐标轴与标题
+plt.xlabel('主成分个数')
+plt.ylabel('累积解释方差占比')
+plt.title('多视图PCA方差累积曲线')
+plt.legend()
+plt.grid()
+plt.show()
+
+# 统计类别数
+Y_flat = Y.ravel()
+num_classes = len(np.unique(Y_flat))
+print("类别总数：", num_classes)
+
+results = []
+
+for i, view in enumerate(views):
+    view = StandardScaler().fit_transform(view.astype(float))
+    
+    pca = PCA().fit(view)
+    cum_var = np.cumsum(pca.explained_variance_ratio_)
+    
+    k_90 = np.argmax(cum_var >= 0.9) + 1
+    d = view.shape[1]
+    
+    results.append([i+1, d, k_90, k_90/d])
+
+import pandas as pd
+df = pd.DataFrame(results, columns=["View","Dimension","k_90","Compression"])
+print(df)
+
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import scipy.io as sio
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 解决中文显示
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 加载数据
+data = sio.loadmat('dataset\Caltech101-7.mat')
+views = data['X'][0]  # 6个视图
+
+# 创建大图：2行3列
+plt.figure(figsize=(18, 12))
+
+for i, view in enumerate(views):
+    # 计算相关系数矩阵
+    corr_matrix = np.corrcoef(view.T)
+    
+    # 子图位置
+    plt.subplot(2, 3, i+1)
+    
+    # 画热力图
+    sns.heatmap(corr_matrix, cmap='coolwarm', center=0, square=True)
+    
+    # 子图标题
+    plt.title(f'视图 {i+1} 特征相关性热力图')
+
+# 整体布局调整
+plt.tight_layout()
+plt.show()
+
+def corr_stats(view):
+    corr = np.corrcoef(view.T)
+    upper = corr[np.triu_indices_from(corr, k=1)]
+    
+    mean_corr = np.mean(np.abs(upper))
+    high_corr_ratio = np.mean(np.abs(upper) > 0.8)
+    
+    return mean_corr, high_corr_ratio
+stats = []
+for i, view in enumerate(views):
+    mean_corr, high_corr_ratio = corr_stats(view)
+    stats.append([i+1, mean_corr, high_corr_ratio])
+
+import pandas as pd
+df_stats = pd.DataFrame(stats, columns=["View", "Mean Correlation", "High Correlation Ratio"])
+print(df_stats)
+
+import scipy.io as sio
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 解决中文显示
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 加载数据
+data = sio.loadmat('dataset\Caltech101-7.mat')
+views = data['X'][0]  # 6个视图
+
+# 创建大图：2行3列
+plt.figure(figsize=(16, 10))
+
+for i, view in enumerate(views):
+    # 计算每个特征的方差
+    variances = np.var(view, axis=0)
+    
+    # 子图
+    plt.subplot(2, 3, i+1)
+    plt.hist(variances, bins=30, color='skyblue', edgecolor='black')
+    
+    # 全中文标签
+    plt.xlabel('特征方差')
+    plt.ylabel('频次')
+    plt.title(f'视图 {i+1} 特征方差分布')
+
+plt.tight_layout()
+plt.show()
+
+
+import scipy.io as sio
+import numpy as np
+
+# 加载数据
+data = sio.loadmat('dataset\Caltech101-7.mat')
+X = data['X']
+Y = data['Y']
+views = data['X'][0]  # 6个视图
+
+# 计算有效秩（修正版）
+def 计算有效秩(特征矩阵):
+    # SVD 奇异值分解
+    U, S, V = np.linalg.svd(特征矩阵, full_matrices=False)
+    # 归一化奇异值
+    奇异值和 = np.sum(S)
+    归一化奇异值 = S / 奇异值和
+    # 计算熵（防止除0，加极小值）
+    熵 = -np.sum(归一化奇异值 * np.log(归一化奇异值 + 1e-10))
+    # 有效秩 = exp(熵)
+    有效秩 = np.exp(熵)
+    return 有效秩
+
+# 遍历 6 个视图，计算结果
+结果列表 = []
+for 序号, 单个视图 in enumerate(views):
+    有效秩结果 = 计算有效秩(单个视图)
+    特征维度 = 单个视图.shape[1]
+    有效秩占比 = 有效秩结果 / 特征维度
+    结果列表.append([序号 + 1, 特征维度, 有效秩结果, 有效秩占比])
+
+# 打印表格（清晰美观）
+print("视图序号\t原始维度\t有效秩\t\t有效秩/总维度")
+print("-" * 60)
+for 行 in 结果列表:
+    print(f"{行[0]}\t\t{行[1]}\t\t{行[2]:.2f}\t\t{行[3]:.2f}")
